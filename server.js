@@ -1,4 +1,5 @@
 const ExcelJS = require('exceljs');
+const { pathToFileURL } = require('url');
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -223,6 +224,10 @@ async function getEspnPdfRanks() {
   if (typeof globalThis.Path2D === 'undefined') globalThis.Path2D = class Path2D {};
 
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(
+    require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs')
+  ).href;
+
   const document = await pdfjs.getDocument({ data: new Uint8Array(buffer), disableWorker: true }).promise;
   let text = '';
 
