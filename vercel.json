@@ -7,6 +7,10 @@
   },
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
       "source": "/download/rankings.csv",
       "destination": "/api/download/rankings"
     },
