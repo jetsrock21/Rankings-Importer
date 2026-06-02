@@ -1,5 +1,4 @@
 const ExcelJS = require('exceljs');
-const { PDFParse } = require('pdf-parse');
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -185,6 +184,7 @@ async function getFantasyProsRanks() {
 }
 
 async function getEspnPdfRanks() {
+  const { PDFParse } = require('pdf-parse');
   const buffer = await fetchBuffer(SOURCES.espnRankingsPdf);
   const parser = new PDFParse({ data: buffer });
 
@@ -369,12 +369,23 @@ async function buildData({ refresh = false } = {}) {
   if (cache && !refresh) return cache;
 
   const fetchedAt = new Date();
-  const [fantasyPros, espnPdf, sleeper, adp] = await Promise.all([
+  const sourceResults = await Promise.allSettled([
     getFantasyProsRanks(),
     getEspnPdfRanks(),
     getSleeperRanks(),
     getEspnAdpRows(),
   ]);
+  const sourceNames = ['FantasyPros ECR', 'ESPN PDF rankings', 'Sleeper ADP', 'ESPN live ADP'];
+  const failures = sourceResults
+    .map((result, index) => ({ result, source: sourceNames[index] }))
+    .filter(({ result }) => result.status === 'rejected')
+    .map(({ result, source }) => `${source}: ${result.reason?.message || result.reason}`);
+
+  if (failures.length) {
+    throw new Error(`Source download failed. ${failures.join(' | ')}`);
+  }
+
+  const [fantasyPros, espnPdf, sleeper, adp] = sourceResults.map((result) => result.value);
 
   const byPlayer = new Map();
   addRankSource(byPlayer, fantasyPros, 'fantasypros_rank');
