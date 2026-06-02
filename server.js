@@ -1,4 +1,3 @@
-const express = require('express');
 const ExcelJS = require('exceljs');
 const { PDFParse } = require('pdf-parse');
 
@@ -262,8 +261,12 @@ async function getDraftSharksAdpRows({ url, source }) {
 }
 
 async function getEspnAdpRows() {
-  const pages = await Promise.all(
-    Array.from({ length: ESPN_LIVE_DRAFT_PAGES }, async (_value, index) => {
+  const pages = [];
+  const batchSize = 3;
+
+  for (let start = 0; start < ESPN_LIVE_DRAFT_PAGES; start += batchSize) {
+    const batch = Array.from({ length: Math.min(batchSize, ESPN_LIVE_DRAFT_PAGES - start) }, async (_value, batchIndex) => {
+      const index = start + batchIndex;
       const filter = {
         players: {
           filterSlotIds: { value: [0, 2, 4, 6, 17, 16, 8, 9, 10, 12, 13, 14, 15] },
@@ -278,8 +281,10 @@ async function getEspnAdpRows() {
           'x-fantasy-filter': JSON.stringify(filter),
         },
       });
-    })
-  );
+    });
+
+    pages.push(...(await Promise.all(batch)));
+  }
 
   const byEspnPlayerId = new Map();
   for (const player of pages.flatMap((page) => page.players || []).map((row) => row.player).filter(Boolean)) {
@@ -458,66 +463,76 @@ async function buildWorkbook(data) {
   return workbook.xlsx.writeBuffer();
 }
 
-const app = express();
-app.use(express.static('public'));
+function createApp() {
+  const express = require('express');
+  const app = express();
 
-app.get('/api/data', async (request, response) => {
-  try {
-    response.json(await buildData({ refresh: request.query.refresh === '1' }));
-  } catch (error) {
-    response.status(500).json({ error: error.message });
-  }
-});
+  app.use(express.static('public'));
 
-app.get('/download/rankings.csv', async (_request, response) => {
-  try {
-    const data = await buildData();
-    const csv = toCsv(data.rankings, [
-      { header: 'name', key: 'name' },
-      { header: 'fantasypros_rank', key: 'fantasypros_rank' },
-      { header: 'espn_rank', key: 'espn_rank' },
-      { header: 'sleeper_rank', key: 'sleeper_rank' },
-    ]);
+  app.get('/api/health', (_request, response) => {
+    response.json({ ok: true });
+  });
 
-    response.type('text/csv');
-    response.attachment('rankings.csv');
-    response.send(csv);
-  } catch (error) {
-    response.status(500).send(error.message);
-  }
-});
+  app.get('/api/data', async (request, response) => {
+    try {
+      response.json(await buildData({ refresh: request.query.refresh === '1' }));
+    } catch (error) {
+      response.status(500).json({ error: error.message });
+    }
+  });
 
-app.get('/download/adp.csv', async (_request, response) => {
-  try {
-    const data = await buildData();
-    const csv = toCsv(data.adp, [
-      { header: 'Name', key: 'Name' },
-      { header: 'ESPN ADP', key: 'ESPN ADP' },
-      { header: 'Position', key: 'Position' },
-    ]);
+  app.get('/download/rankings.csv', async (_request, response) => {
+    try {
+      const data = await buildData();
+      const csv = toCsv(data.rankings, [
+        { header: 'name', key: 'name' },
+        { header: 'fantasypros_rank', key: 'fantasypros_rank' },
+        { header: 'espn_rank', key: 'espn_rank' },
+        { header: 'sleeper_rank', key: 'sleeper_rank' },
+      ]);
 
-    response.type('text/csv');
-    response.attachment('adp.csv');
-    response.send(csv);
-  } catch (error) {
-    response.status(500).send(error.message);
-  }
-});
+      response.type('text/csv');
+      response.attachment('rankings.csv');
+      response.send(csv);
+    } catch (error) {
+      response.status(500).send(error.message);
+    }
+  });
 
-app.get('/download/workbook.xlsx', async (_request, response) => {
-  try {
-    const workbook = await buildWorkbook(await buildData());
+  app.get('/download/adp.csv', async (_request, response) => {
+    try {
+      const data = await buildData();
+      const csv = toCsv(data.adp, [
+        { header: 'Name', key: 'Name' },
+        { header: 'ESPN ADP', key: 'ESPN ADP' },
+        { header: 'Position', key: 'Position' },
+      ]);
 
-    response.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    response.attachment('fantasy-rankings.xlsx');
-    response.send(Buffer.from(workbook));
-  } catch (error) {
-    response.status(500).send(error.message);
-  }
-});
+      response.type('text/csv');
+      response.attachment('adp.csv');
+      response.send(csv);
+    } catch (error) {
+      response.status(500).send(error.message);
+    }
+  });
+
+  app.get('/download/workbook.xlsx', async (_request, response) => {
+    try {
+      const workbook = await buildWorkbook(await buildData());
+
+      response.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      response.attachment('fantasy-rankings.xlsx');
+      response.send(Buffer.from(workbook));
+    } catch (error) {
+      response.status(500).send(error.message);
+    }
+  });
+
+  return app;
+}
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  createApp().listen(PORT, () => {
     console.log(`Rankinga is running at http://localhost:${PORT}`);
   });
 }
@@ -525,6 +540,7 @@ if (require.main === module) {
 module.exports = {
   buildData,
   buildWorkbook,
+  createApp,
   toCsv,
   SOURCES,
 };
