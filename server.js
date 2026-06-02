@@ -184,24 +184,63 @@ async function getFantasyProsRanks() {
 }
 
 async function getEspnPdfRanks() {
-  const { PDFParse } = require('pdf-parse');
   const buffer = await fetchBuffer(SOURCES.espnRankingsPdf);
-  const parser = new PDFParse({ data: buffer });
 
-  try {
-    const result = await parser.getText();
-    const matches = result.text.matchAll(/(\d+)\.\s+\(([A-Z]+)[0-9]+\)\s+(.+?),\s+([A-Z]{2,3})\s+\$\d+\s+\d+/g);
+  if (typeof globalThis.DOMMatrix === 'undefined') {
+    globalThis.DOMMatrix = class DOMMatrix {
+      constructor() {
+        this.a = 1;
+        this.b = 0;
+        this.c = 0;
+        this.d = 1;
+        this.e = 0;
+        this.f = 0;
+      }
 
-    return Array.from(matches, (match) => ({
-      name: match[3].trim(),
-      key: normalizeName(match[3]),
-      position: match[2],
-      team: normalizeTeam(match[4]),
-      rank: Number(match[1]),
-    })).filter((player) => player.position !== 'DST');
-  } finally {
-    await parser.destroy();
+      multiply() {
+        return this;
+      }
+
+      translate() {
+        return this;
+      }
+
+      scale() {
+        return this;
+      }
+
+      rotate() {
+        return this;
+      }
+
+      transformPoint(point = {}) {
+        return { x: point.x || 0, y: point.y || 0 };
+      }
+    };
   }
+
+  if (typeof globalThis.ImageData === 'undefined') globalThis.ImageData = class ImageData {};
+  if (typeof globalThis.Path2D === 'undefined') globalThis.Path2D = class Path2D {};
+
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const document = await pdfjs.getDocument({ data: new Uint8Array(buffer), disableWorker: true }).promise;
+  let text = '';
+
+  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+    const page = await document.getPage(pageNumber);
+    const content = await page.getTextContent();
+    text += `${content.items.map((item) => item.str).join(' ')}\n`;
+  }
+
+  const matches = text.matchAll(/(\d+)\.\s+\(([A-Z]+)[0-9]+\)\s+(.+?),\s+([A-Z]{2,3})\s+\$\d+\s+\d+/g);
+
+  return Array.from(matches, (match) => ({
+    name: match[3].trim(),
+    key: normalizeName(match[3]),
+    position: match[2],
+    team: normalizeTeam(match[4]),
+    rank: Number(match[1]),
+  })).filter((player) => player.position !== 'DST');
 }
 
 async function getSleeperRanks() {
