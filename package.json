@@ -1,0 +1,20 @@
+{
+  "name": "rankinga",
+  "version": "1.0.0",
+  "description": "Fantasy football rankings downloader and exporter",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node scripts/check-scrapers.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "pdf-parse": "^2.4.5"
+  }
+}

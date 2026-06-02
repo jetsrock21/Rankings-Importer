@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fantasy Rankings Downloader</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="toolbar">
+        <div>
+          <h1>Fantasy Rankings Downloader</h1>
+          <p id="status">Ready to pull ESPN, Sleeper, FantasyPros, and ESPN ADP.</p>
+        </div>
+        <div class="actions">
+          <button id="refresh" type="button">Refresh Data</button>
+          <a class="button primary disabled" id="workbook" href="/download/workbook.xlsx">Excel Workbook</a>
+          <a class="button disabled" id="rankingsCsv" href="/download/rankings.csv">Rankings CSV</a>
+          <a class="button disabled" id="adpCsv" href="/download/adp.csv">ADP CSV</a>
+        </div>
+      </section>
+
+      <section class="stats" id="stats" aria-live="polite"></section>
+
+      <section class="grid">
+        <div class="panel">
+          <div class="panel-heading">
+            <h2>Rankings</h2>
+            <span id="rankingsCount"></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>name</th>
+                  <th>fantasypros_rank</th>
+                  <th>espn_rank</th>
+                  <th>sleeper_rank</th>
+                </tr>
+              </thead>
+              <tbody id="rankingsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel compact">
+          <div class="panel-heading">
+            <h2>ADP</h2>
+            <span id="adpCount"></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>ESPN ADP</th>
+                  <th>Position</th>
+                </tr>
+              </thead>
+              <tbody id="adpBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

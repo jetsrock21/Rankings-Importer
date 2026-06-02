@@ -1,0 +1,21 @@
+{
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/download/rankings.csv",
+      "destination": "/api/download/rankings"
+    },
+    {
+      "source": "/download/adp.csv",
+      "destination": "/api/download/adp"
+    },
+    {
+      "source": "/download/workbook.xlsx",
+      "destination": "/api/download/workbook"
+    }
+  ]
+}
